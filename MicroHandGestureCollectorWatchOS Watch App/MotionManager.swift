@@ -11,10 +11,11 @@ import Combine
 
 #if os(watchOS)  // 确保只在 watchOS 平台运行
 public class MotionManager: ObservableObject {  // 改为 public
-    @Published private(set) var accelerometerData: CMAccelerometerData?
-    @Published private(set) var gyroData: CMGyroData?
+    @Published private(set) var accelerationData: CMAcceleration?
+    @Published private(set) var rotationData: CMRotationRate?
     private let motionManager: CMMotionManager  // 改为 private
     private var accFileHandle: FileHandle?
+    private var gyroFileHandle: FileHandle?
     private var isCollecting = false
     
     public init() {  // 改为 public
@@ -25,57 +26,57 @@ public class MotionManager: ObservableObject {  // 改为 public
         print("设备运动状态: \(motionManager.isDeviceMotionAvailable ? "可用" : "不可用")")
     }
     
-    public func startUpdates() {  // 改为 public
-        stopUpdates()
-        
-        if motionManager.isGyroAvailable {
-            print("开始陀螺仪更新")
-            motionManager.gyroUpdateInterval = 1.0 / 60.0
-            motionManager.startGyroUpdates(to: OperationQueue.main) { [weak self] (data, error) in
-                if let error = error {
-                    print("陀螺仪错误: \(error.localizedDescription)")
-                    return
-                }
-                
-                guard let data = data else { 
-                    print("陀螺仪数据为空")
-                    return 
-                }
-                
-                DispatchQueue.main.async {
-                    self?.gyroData = data
-                    print("陀螺仪: x=\(data.rotationRate.x), y=\(data.rotationRate.y), z=\(data.rotationRate.z)")
-                }
-            }
-        } else {
-            print("陀螺仪不可用，尝试使用 deviceMotion")
-            if motionManager.isDeviceMotionAvailable {
-                motionManager.deviceMotionUpdateInterval = 1.0 / 60.0
-                motionManager.startDeviceMotionUpdates(to: OperationQueue.main) { [weak self] (motion, error) in
-                    if let motion = motion {
-                        print("设备运动: x=\(motion.rotationRate.x), y=\(motion.rotationRate.y), z=\(motion.rotationRate.z)")
-                    }
-                }
-            }
-        }
-        
-        if motionManager.isAccelerometerAvailable {
-            print("开始加速度计更新")
-            motionManager.accelerometerUpdateInterval = 1.0 / 60.0
-            motionManager.startAccelerometerUpdates(to: OperationQueue.main) { [weak self] (data, error) in
-                if let error = error {
-                    print("加速度计错误: \(error.localizedDescription)")
-                    return
-                }
-                
-                guard let data = data else { return }
-                DispatchQueue.main.async {
-                    self?.accelerometerData = data
-                }
-            }
-        }
-    }
-    
+//    public func startUpdates() {  // 改为 public
+//        stopUpdates()
+//        
+//        if motionManager.isGyroAvailable {
+//            print("开始陀螺仪更新")
+//            motionManager.gyroUpdateInterval = 1.0 / 60.0
+//            motionManager.startGyroUpdates(to: OperationQueue.main) { [weak self] (data, error) in
+//                if let error = error {
+//                    print("陀螺仪错误: \(error.localizedDescription)")
+//                    return
+//                }
+//                
+//                guard let data = data else { 
+//                    print("陀螺仪数据为空")
+//                    return 
+//                }
+//                
+//                DispatchQueue.main.async {
+//                    self?.rotationData = data.rotationRate
+//                    print("陀螺仪: x=\(data.rotationRate.x), y=\(data.rotationRate.y), z=\(data.rotationRate.z)")
+//                }
+//            }
+//        } else {
+//            print("陀螺仪不可用，尝试使用 deviceMotion")
+//            if motionManager.isDeviceMotionAvailable {
+//                motionManager.deviceMotionUpdateInterval = 1.0 / 60.0
+//                motionManager.startDeviceMotionUpdates(to: OperationQueue.main) { [weak self] (motion, error) in
+//                    if let motion = motion {
+//                        print("设备运动: x=\(motion.rotationRate.x), y=\(motion.rotationRate.y), z=\(motion.rotationRate.z)")
+//                    }
+//                }
+//            }
+//        }
+//        
+//        if motionManager.isAccelerometerAvailable {
+//            print("开始加速度计更新")
+//            motionManager.accelerometerUpdateInterval = 1.0 / 60.0
+//            motionManager.startAccelerometerUpdates(to: OperationQueue.main) { [weak self] (data, error) in
+//                if let error = error {
+//                    print("加速度计错误: \(error.localizedDescription)")
+//                    return
+//                }
+//                
+//                guard let data = data else { return }
+//                DispatchQueue.main.async {
+//                    self?.accelerationData = data.acceleration
+//                }
+//            }
+//        }
+//    }
+//    
     public func stopUpdates() {  // 改为 public
         motionManager.stopGyroUpdates()
         motionManager.stopAccelerometerUpdates()
@@ -84,7 +85,7 @@ public class MotionManager: ObservableObject {  // 改为 public
     }
     
     public func startDataCollection(hand: String, gesture: String, force: String) {
-        stopUpdates()
+        stopDataCollection()
         isCollecting = true
         
         // 创建文件夹和文件
@@ -100,36 +101,73 @@ public class MotionManager: ObservableObject {  // 改为 public
         
         let folderURL = documentsPath.appendingPathComponent(folderName)
         let accFileURL = folderURL.appendingPathComponent("acc.txt")
+        let gyroFileURL = folderURL.appendingPathComponent("gyro.txt")
         
         do {
             try FileManager.default.createDirectory(at: folderURL, withIntermediateDirectories: true)
+            
+            // 创建文件并写入头部
             FileManager.default.createFile(atPath: accFileURL.path, contents: nil)
+            FileManager.default.createFile(atPath: gyroFileURL.path, contents: nil)
             accFileHandle = try FileHandle(forWritingTo: accFileURL)
+            gyroFileHandle = try FileHandle(forWritingTo: gyroFileURL)
+            
+            let accHeader = "timestamp,acc_x,acc_y,acc_z\n"
+            let gyroHeader = "timestamp,gyro_x,gyro_y,gyro_z\n"
+            accFileHandle?.write(accHeader.data(using: .utf8)!)
+            gyroFileHandle?.write(gyroHeader.data(using: .utf8)!)
+            
         } catch {
             print("创建文件失败: \(error)")
             return
         }
         
-        if motionManager.isAccelerometerAvailable {
-            motionManager.accelerometerUpdateInterval = 1.0 / 60.0
-            motionManager.startAccelerometerUpdates(to: OperationQueue.main) { [weak self] (data, error) in
-                guard let self = self, let data = data else { return }
+        // 设置100Hz的采样率
+        let updateInterval = 1.0 / 100.0
+        
+        if motionManager.isDeviceMotionAvailable {
+            motionManager.deviceMotionUpdateInterval = updateInterval
+            motionManager.startDeviceMotionUpdates(to: OperationQueue.main) { [weak self] (motion, error) in
+                guard let self = self, let motion = motion else { return }
                 
-                let timestamp = Date().timeIntervalSince1970
-                let dataString = String(format: "%.6f,%.6f,%.6f,%.6f\n",
-                                     timestamp,
-                                     data.acceleration.x,
-                                     data.acceleration.y,
-                                     data.acceleration.z)
+                // 使用硬件时间戳
+                let timestamp = motion.timestamp
                 
-                if let data = dataString.data(using: .utf8) {
-                    self.accFileHandle?.write(data)
+                // 合并重力加速度和用户加速度，单位为 m/s²
+                let totalAccX = motion.gravity.x * 9.81 + motion.userAcceleration.x * 9.81
+                let totalAccY = motion.gravity.y * 9.81 + motion.userAcceleration.y * 9.81
+                let totalAccZ = motion.gravity.z * 9.81 + motion.userAcceleration.z * 9.81
+                
+                // 保存加速度数据（包含重力，单位 m/s²）
+                let accDataString = String(format: "%.6f,%.6f,%.6f,%.6f\n",
+                                        timestamp,
+                                        totalAccX,
+                                        totalAccY,
+                                        totalAccZ)
+                
+                // 保存陀螺仪数据（弧度/秒）
+                let gyroDataString = String(format: "%.6f,%.6f,%.6f,%.6f\n",
+                                         timestamp,
+                                         motion.rotationRate.x,
+                                         motion.rotationRate.y,
+                                         motion.rotationRate.z)
+                
+                if let accData = accDataString.data(using: .utf8),
+                   let gyroData = gyroDataString.data(using: .utf8) {
+                    self.accFileHandle?.write(accData)
+                    self.gyroFileHandle?.write(gyroData)
                 }
                 
+                // 更新UI显示的数据
                 DispatchQueue.main.async {
-                    self.accelerometerData = data
+                    // 创建包含重力的加速度数据结构
+                    let totalAcc = CMAcceleration(x: totalAccX, y: totalAccY, z: totalAccZ)
+                    self.accelerationData = totalAcc
+                    self.rotationData = motion.rotationRate
                 }
             }
+        } else {
+            print("设备运动数据不可用")
         }
     }
     
@@ -137,6 +175,8 @@ public class MotionManager: ObservableObject {  // 改为 public
         stopUpdates()
         accFileHandle?.closeFile()
         accFileHandle = nil
+        gyroFileHandle?.closeFile()
+        gyroFileHandle = nil
         isCollecting = false
     }
     

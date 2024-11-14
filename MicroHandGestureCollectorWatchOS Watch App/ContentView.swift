@@ -163,15 +163,28 @@ struct ContentView: View {
                 }
                 
                 // 实时数据显示
-                if let accData = motionManager.accelerometerData {
+                if let accData = motionManager.accelerationData {
                     VStack(alignment: .leading, spacing: 5) {
-                        Text("实时数据").font(.headline)
+                        Text("加速度计").font(.headline)
                         Text(String(format: "X: %.2f\nY: %.2f\nZ: %.2f",
-                                  accData.acceleration.x,
-                                  accData.acceleration.y,
-                                  accData.acceleration.z))
+                                  accData.x,
+                                  accData.y,
+                                  accData.z))
                         .font(.system(.body, design: .monospaced))
                         .foregroundColor(.green)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                
+                if let rotationData = motionManager.rotationData {
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("陀螺仪").font(.headline)
+                        Text(String(format: "X: %.2f\nY: %.2f\nZ: %.2f",
+                                  rotationData.x,
+                                  rotationData.y,
+                                  rotationData.z))
+                        .font(.system(.body, design: .monospaced))
+                        .foregroundColor(.blue)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
