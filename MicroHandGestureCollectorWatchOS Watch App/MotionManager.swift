@@ -54,8 +54,8 @@ public class MotionManager: ObservableObject {
             accFileHandle = try FileHandle(forWritingTo: accFileURL)
             gyroFileHandle = try FileHandle(forWritingTo: gyroFileURL)
             
-            let accHeader = "timestamp,acc_x,acc_y,acc_z\n"
-            let gyroHeader = "timestamp,gyro_x,gyro_y,gyro_z\n"
+            let accHeader = "timestamp_ns,acc_x,acc_y,acc_z\n"
+            let gyroHeader = "timestamp_ns,gyro_x,gyro_y,gyro_z\n"
             accFileHandle?.write(accHeader.data(using: .utf8)!)
             gyroFileHandle?.write(gyroHeader.data(using: .utf8)!)
             
@@ -65,20 +65,20 @@ public class MotionManager: ObservableObject {
                 motionManager.startDeviceMotionUpdates(to: OperationQueue.main) { [weak self] (motion, error) in
                     guard let self = self, let motion = motion else { return }
                     
-                    let timestamp = motion.timestamp
+                    let timestampNs = UInt64(motion.timestamp * 1_000_000_000)
                     
                     let totalAccX = motion.gravity.x * 9.81 + motion.userAcceleration.x * 9.81
                     let totalAccY = motion.gravity.y * 9.81 + motion.userAcceleration.y * 9.81
                     let totalAccZ = motion.gravity.z * 9.81 + motion.userAcceleration.z * 9.81
                     
-                    let accDataString = String(format: "%.6f,%.6f,%.6f,%.6f\n",
-                                            timestamp,
+                    let accDataString = String(format: "%llu,%.6f,%.6f,%.6f\n",
+                                            timestampNs,
                                             totalAccX,
                                             totalAccY,
                                             totalAccZ)
                     
-                    let gyroDataString = String(format: "%.6f,%.6f,%.6f,%.6f\n",
-                                             timestamp,
+                    let gyroDataString = String(format: "%llu,%.6f,%.6f,%.6f\n",
+                                             timestampNs,
                                              motion.rotationRate.x,
                                              motion.rotationRate.y,
                                              motion.rotationRate.z)
