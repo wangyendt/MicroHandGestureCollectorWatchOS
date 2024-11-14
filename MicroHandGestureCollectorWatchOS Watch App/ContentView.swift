@@ -143,12 +143,16 @@ struct ContentView: View {
                         motionManager.stopDataCollection()
                     }
                 }) {
-                    Text(isCollecting ? "停止采集" : "开始采集")
-                        .frame(maxWidth: .infinity)
-                        .foregroundColor(.white)
-                        .padding(.vertical, 8)
-                        .background(isCollecting ? Color.red : Color.blue)
-                        .cornerRadius(8)
+                    HStack {
+                        Image(systemName: isCollecting ? "stop.circle.fill" : "record.circle")
+                            .foregroundColor(.white)
+                        Text(isCollecting ? "停止采集" : "开始采集")
+                            .foregroundColor(.white)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                    .background(isCollecting ? Color.red : Color.blue)
+                    .cornerRadius(8)
                 }
                 .padding(.top, 10)
                 
@@ -156,20 +160,28 @@ struct ContentView: View {
                 Button(action: {
                     motionManager.exportData()
                 }) {
-                    Text("导出数据")
-                        .frame(maxWidth: .infinity)
-                        .foregroundColor(.white)
-                        .padding(.vertical, 8)
-                        .background(Color.green)
-                        .cornerRadius(8)
+                    HStack {
+                        Image(systemName: "square.and.arrow.up.circle.fill")
+                            .foregroundColor(.white)
+                        Text("导出数据")
+                            .foregroundColor(.white)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                    .background(Color.green)
+                    .cornerRadius(8)
                 }
                 
-            
+                // 数据管理按钮
                 Button(action: {
                     showingDataManagement = true
                 }) {
-                    Image(systemName: "folder")
-                    Text("数据管理")
+                    HStack {
+                        Image(systemName: "folder.circle.fill")
+                            .foregroundColor(.blue)
+                        Text("数据管理")
+                            .foregroundColor(.blue)
+                    }
                 }
                 .sheet(isPresented: $showingDataManagement) {
                     NavigationView {

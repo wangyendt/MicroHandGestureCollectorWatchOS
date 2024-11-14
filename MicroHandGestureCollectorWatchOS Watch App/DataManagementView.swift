@@ -10,10 +10,35 @@ struct DataFile: Identifiable {
 struct DataManagementView: View {
     @State private var dataFiles: [DataFile] = []
     @State private var isEditing = false
+    @State private var isAllSelected = false
+    @State private var showingDeleteAlert = false
     @Environment(\.dismiss) private var dismiss
+    
+    var selectedFiles: [DataFile] {
+        dataFiles.filter { $0.isSelected }
+    }
     
     var body: some View {
         List {
+            if isEditing && !dataFiles.isEmpty {
+                Button(action: {
+                    isAllSelected.toggle()
+                    dataFiles = dataFiles.map { file in
+                        var newFile = file
+                        newFile.isSelected = isAllSelected
+                        return newFile
+                    }
+                }) {
+                    HStack {
+                        Image(systemName: isAllSelected ? "checkmark.circle.fill" : "circle")
+                            .foregroundColor(isAllSelected ? .blue : .gray)
+                        Image(systemName: "checklist")
+                            .foregroundColor(.blue)
+                        Text(isAllSelected ? "取消全选" : "全选")
+                    }
+                }
+            }
+            
             ForEach($dataFiles) { $file in
                 HStack {
                     if isEditing {
@@ -21,8 +46,11 @@ struct DataManagementView: View {
                             .foregroundColor(file.isSelected ? .blue : .gray)
                             .onTapGesture {
                                 file.isSelected.toggle()
+                                updateAllSelectedState()
                             }
                     }
+                    Image(systemName: "doc.text")
+                        .foregroundColor(.blue)
                     Text(file.name)
                 }
             }
@@ -30,17 +58,29 @@ struct DataManagementView: View {
         .navigationTitle("数据管理")
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
-                Button(isEditing ? "完成" : "编辑") {
+                Button(action: {
                     isEditing.toggle()
+                    if !isEditing {
+                        isAllSelected = false
+                        dataFiles = dataFiles.map { file in
+                            var newFile = file
+                            newFile.isSelected = false
+                            return newFile
+                        }
+                    }
+                }) {
+                    HStack {
+                        Image(systemName: isEditing ? "checkmark" : "pencil")
+                        Text(isEditing ? "完成" : "编辑")
+                    }
                 }
             }
             
             if isEditing {
                 ToolbarItem(placement: .cancellationAction) {
                     Button {
-                        let selectedFiles = dataFiles.filter { $0.isSelected }
                         if !selectedFiles.isEmpty {
-                            deleteSelectedFiles()
+                            showingDeleteAlert = true
                         }
                     } label: {
                         Image(systemName: "trash")
@@ -48,9 +88,21 @@ struct DataManagementView: View {
                 }
             }
         }
+        .alert("确认删除", isPresented: $showingDeleteAlert) {
+            Button("取消", role: .cancel) { }
+            Button("删除", role: .destructive) {
+                deleteSelectedFiles()
+            }
+        } message: {
+            Text("确定要删除选中的\(selectedFiles.count)个文件吗？")
+        }
         .onAppear {
             loadDataFiles()
         }
+    }
+    
+    private func updateAllSelectedState() {
+        isAllSelected = !dataFiles.contains { !$0.isSelected }
     }
     
     private func loadDataFiles() {
@@ -60,19 +112,17 @@ struct DataManagementView: View {
             let fileURLs = try FileManager.default.contentsOfDirectory(at: documentsPath, includingPropertiesForKeys: nil)
             dataFiles = fileURLs
                 .filter { url in
-                    // 过滤出采集的数据文件（格式：yyyy_MM_dd_HH_mm_ss_手势_力度）
                     let filename = url.lastPathComponent
                     return filename.contains("_右手_") || filename.contains("_左手_")
                 }
                 .map { DataFile(name: $0.lastPathComponent, url: $0) }
-                .sorted { $0.name > $1.name } // 按文件名降序排序，最新的在最上面
+                .sorted { $0.name > $1.name }
         } catch {
             print("Error loading files: \(error)")
         }
     }
     
     private func deleteSelectedFiles() {
-        let selectedFiles = dataFiles.filter { $0.isSelected }
         for file in selectedFiles {
             do {
                 try FileManager.default.removeItem(at: file.url)
@@ -82,5 +132,6 @@ struct DataManagementView: View {
         }
         loadDataFiles()
         isEditing = false
+        isAllSelected = false
     }
 } 
