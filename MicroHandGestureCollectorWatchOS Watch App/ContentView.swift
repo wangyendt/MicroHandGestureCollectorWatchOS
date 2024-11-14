@@ -18,6 +18,8 @@ struct ContentView: View {
     @State private var showGesturePicker = false
     @State private var showForcePicker = false
     
+    @State private var showingDataManagement = false
+    
     let handOptions = ["左手", "右手"]
     let gestureOptions = ["单击[正]", "双击[正]", "握拳[正]", "鼓掌[负]", "抖腕[负]", "拍打[负]", "日常[负]"]
     let forceOptions = ["轻", "重"]
@@ -160,6 +162,19 @@ struct ContentView: View {
                         .padding(.vertical, 8)
                         .background(Color.green)
                         .cornerRadius(8)
+                }
+                
+            
+                Button(action: {
+                    showingDataManagement = true
+                }) {
+                    Image(systemName: "folder")
+                    Text("数据管理")
+                }
+                .sheet(isPresented: $showingDataManagement) {
+                    NavigationView {
+                        DataManagementView()
+                    }
                 }
                 
                 // 实时数据显示
