@@ -55,7 +55,7 @@ struct ContentView: View {
                                     Text(option)
                                     Spacer()
                                     if selectedHand == option {
-                                        Image(systemName: "checkmark")
+                                        Text("✓")
                                             .foregroundColor(.blue)
                                     }
                                 }
@@ -89,7 +89,7 @@ struct ContentView: View {
                                     Text(option)
                                     Spacer()
                                     if selectedGesture == option {
-                                        Image(systemName: "checkmark")
+                                        Text("✓")
                                             .foregroundColor(.blue)
                                     }
                                 }
@@ -123,7 +123,7 @@ struct ContentView: View {
                                     Text(option)
                                     Spacer()
                                     if selectedForce == option {
-                                        Image(systemName: "checkmark")
+                                        Text("✓")
                                             .foregroundColor(.blue)
                                     }
                                 }
@@ -151,9 +151,7 @@ struct ContentView: View {
                             ProgressView()
                                 .tint(.white)
                         } else {
-                            Image(systemName: isCollecting ? "stop.circle.fill" : "record.circle")
-                                .foregroundColor(.white)
-                            Text(isCollecting ? "停止采集" : "开始采集")
+                            Text(isCollecting ? "■ 停止采集" : "● 开始采集")
                                 .foregroundColor(.white)
                         }
                     }
@@ -170,13 +168,11 @@ struct ContentView: View {
                     motionManager.exportData()
                 }) {
                     HStack {
-                        Image(systemName: "square.and.arrow.up.circle.fill")
-                            .foregroundColor(.white)
                         if connectivityManager.isSending {
                             ProgressView()
                                 .tint(.white)
                         } else {
-                            Text("导出到iPhone")
+                            Text("⬆️ 导出到iPhone")
                                 .foregroundColor(.white)
                         }
                     }
@@ -200,9 +196,7 @@ struct ContentView: View {
                     showingDeleteAllAlert = true
                 }) {
                     HStack {
-                        Image(systemName: "trash.circle.fill")
-                            .foregroundColor(.white)
-                        Text("删除全部数据")
+                        Text("🗑️ 删除全部数据")
                             .foregroundColor(.white)
                     }
                     .frame(maxWidth: .infinity)
@@ -224,9 +218,7 @@ struct ContentView: View {
                     showingDataManagement = true
                 }) {
                     HStack {
-                        Image(systemName: "folder.circle.fill")
-                            .foregroundColor(.blue)
-                        Text("数据管理")
+                        Text("📁 数据管理")
                             .foregroundColor(.blue)
                     }
                 }
