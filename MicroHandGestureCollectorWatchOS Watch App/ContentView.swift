@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var motionManager = MotionManager()
+    @StateObject private var connectivityManager = WatchConnectivityManager.shared
     @State private var isCollecting = false
     @State private var selectedHand = "右手"
     @State private var selectedGesture = "单击[正]"
@@ -19,6 +20,7 @@ struct ContentView: View {
     @State private var showForcePicker = false
     
     @State private var showingDataManagement = false
+    @State private var showingDeleteAllAlert = false
     
     let handOptions = ["左手", "右手"]
     let gestureOptions = ["单击[正]", "双击[正]", "握拳[正]", "鼓掌[负]", "抖腕[负]", "拍打[负]", "日常[负]"]
@@ -132,6 +134,7 @@ struct ContentView: View {
                 
                 // 开始/停止按钮
                 Button(action: {
+                    guard motionManager.isReady else { return }
                     isCollecting.toggle()
                     if isCollecting {
                         motionManager.startDataCollection(
@@ -144,16 +147,22 @@ struct ContentView: View {
                     }
                 }) {
                     HStack {
-                        Image(systemName: isCollecting ? "stop.circle.fill" : "record.circle")
-                            .foregroundColor(.white)
-                        Text(isCollecting ? "停止采集" : "开始采集")
-                            .foregroundColor(.white)
+                        if !motionManager.isReady {
+                            ProgressView()
+                                .tint(.white)
+                        } else {
+                            Image(systemName: isCollecting ? "stop.circle.fill" : "record.circle")
+                                .foregroundColor(.white)
+                            Text(isCollecting ? "停止采集" : "开始采集")
+                                .foregroundColor(.white)
+                        }
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
                     .background(isCollecting ? Color.red : Color.blue)
                     .cornerRadius(8)
                 }
+                .disabled(!motionManager.isReady)
                 .padding(.top, 10)
                 
                 // 导出按钮
@@ -163,13 +172,51 @@ struct ContentView: View {
                     HStack {
                         Image(systemName: "square.and.arrow.up.circle.fill")
                             .foregroundColor(.white)
-                        Text("导出数据")
-                            .foregroundColor(.white)
+                        if connectivityManager.isSending {
+                            ProgressView()
+                                .tint(.white)
+                        } else {
+                            Text("导出到iPhone")
+                                .foregroundColor(.white)
+                        }
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
                     .background(Color.green)
                     .cornerRadius(8)
+                }
+                .disabled(connectivityManager.isSending)
+                
+                // 状态消息
+                if !connectivityManager.lastMessage.isEmpty {
+                    Text(connectivityManager.lastMessage)
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                        .padding(.vertical, 4)
+                }
+                
+                // 删除全部数据按钮
+                Button(action: {
+                    showingDeleteAllAlert = true
+                }) {
+                    HStack {
+                        Image(systemName: "trash.circle.fill")
+                            .foregroundColor(.white)
+                        Text("删除全部数据")
+                            .foregroundColor(.white)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                    .background(Color.red)
+                    .cornerRadius(8)
+                }
+                .alert("确认删除", isPresented: $showingDeleteAllAlert) {
+                    Button("取消", role: .cancel) { }
+                    Button("删除", role: .destructive) {
+                        deleteAllData()
+                    }
+                } message: {
+                    Text("确定要删除所有数据吗？此操作不可恢复。")
                 }
                 
                 // 数据管理按钮
@@ -186,6 +233,7 @@ struct ContentView: View {
                 .sheet(isPresented: $showingDataManagement) {
                     NavigationView {
                         DataManagementView()
+                            .navigationBarTitleDisplayMode(.inline)
                     }
                 }
                 
@@ -220,6 +268,21 @@ struct ContentView: View {
                     .padding()
             }
             .padding(.horizontal, 10)
+        }
+    }
+    
+    private func deleteAllData() {
+        guard let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
+        
+        do {
+            let fileURLs = try FileManager.default.contentsOfDirectory(at: documentsPath, includingPropertiesForKeys: nil)
+            for fileURL in fileURLs {
+                if fileURL.lastPathComponent.contains("_右手_") || fileURL.lastPathComponent.contains("_左手_") {
+                    try FileManager.default.removeItem(at: fileURL)
+                }
+            }
+        } catch {
+            print("Error deleting all files: \(error)")
         }
     }
 }

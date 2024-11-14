@@ -12,6 +12,8 @@ struct DataManagementView: View {
     @State private var isEditing = false
     @State private var isAllSelected = false
     @State private var showingDeleteAlert = false
+    @State private var showingExportAlert = false
+    @StateObject private var connectivityManager = WatchConnectivityManager.shared
     @Environment(\.dismiss) private var dismiss
     
     var selectedFiles: [DataFile] {
@@ -20,74 +22,91 @@ struct DataManagementView: View {
     
     var body: some View {
         List {
-            if isEditing && !dataFiles.isEmpty {
-                Button(action: {
-                    isAllSelected.toggle()
-                    dataFiles = dataFiles.map { file in
-                        var newFile = file
-                        newFile.isSelected = isAllSelected
-                        return newFile
-                    }
-                }) {
-                    HStack {
-                        Image(systemName: isAllSelected ? "checkmark.circle.fill" : "circle")
-                            .foregroundColor(isAllSelected ? .blue : .gray)
-                        Image(systemName: "checklist")
-                            .foregroundColor(.blue)
-                        Text(isAllSelected ? "取消全选" : "全选")
+            if dataFiles.isEmpty {
+                Text("暂无数据")
+                    .foregroundColor(.secondary)
+            } else {
+                if isEditing {
+                    Button {
+                        isAllSelected.toggle()
+                        dataFiles = dataFiles.map { file in
+                            var newFile = file
+                            newFile.isSelected = isAllSelected
+                            return newFile
+                        }
+                    } label: {
+                        HStack {
+                            Image(systemName: isAllSelected ? "checkmark.circle.fill" : "circle")
+                                .foregroundColor(isAllSelected ? .blue : .gray)
+                            Text(isAllSelected ? "取消全选" : "全选")
+                        }
                     }
                 }
-            }
-            
-            ForEach($dataFiles) { $file in
-                HStack {
-                    if isEditing {
-                        Image(systemName: file.isSelected ? "checkmark.circle.fill" : "circle")
-                            .foregroundColor(file.isSelected ? .blue : .gray)
-                            .onTapGesture {
+                
+                ForEach($dataFiles) { $file in
+                    HStack {
+                        if isEditing {
+                            Button {
                                 file.isSelected.toggle()
                                 updateAllSelectedState()
+                            } label: {
+                                Image(systemName: file.isSelected ? "checkmark.circle.fill" : "circle")
+                                    .foregroundColor(file.isSelected ? .blue : .gray)
                             }
+                            .buttonStyle(PlainButtonStyle())
+                        }
+                        VStack(alignment: .leading) {
+                            Text(file.name)
+                                .lineLimit(1)
+                        }
                     }
-                    Image(systemName: "doc.text")
-                        .foregroundColor(.blue)
-                    Text(file.name)
                 }
             }
         }
         .navigationTitle("数据管理")
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .confirmationAction) {
-                Button(action: {
-                    isEditing.toggle()
-                    if !isEditing {
-                        isAllSelected = false
-                        dataFiles = dataFiles.map { file in
-                            var newFile = file
-                            newFile.isSelected = false
-                            return newFile
-                        }
+            ToolbarItemGroup(placement: .bottomBar) {
+                if isEditing && !selectedFiles.isEmpty {
+                    Button {
+                        showingDeleteAlert = true
+                    } label: {
+                        Image(systemName: "trash")
+                        Text("删除")
                     }
-                }) {
-                    HStack {
-                        Image(systemName: isEditing ? "checkmark" : "pencil")
-                        Text(isEditing ? "完成" : "编辑")
+                    .foregroundColor(.red)
+                    
+                    Button {
+                        showingExportAlert = true
+                    } label: {
+                        Image(systemName: "square.and.arrow.up")
+                        Text("导出")
                     }
+                    .foregroundColor(.blue)
                 }
             }
             
-            if isEditing {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button {
-                        if !selectedFiles.isEmpty {
-                            showingDeleteAlert = true
-                        }
-                    } label: {
-                        Image(systemName: "trash")
+            ToolbarItem(placement: .automatic) {
+                Button {
+                    isEditing.toggle()
+                    if !isEditing {
+                        resetSelection()
                     }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: isEditing ? "xmark.circle.fill" : "pencil.circle.fill")
+                            .resizable()
+                            .frame(width: 20, height: 20)
+                        Text(isEditing ? "完成" : "编辑")
+                            .font(.system(size: 14))
+                    }
+                    .foregroundColor(isEditing ? .red : .blue)
                 }
+                .buttonStyle(PlainButtonStyle())
             }
         }
+        .toolbarBackground(.clear, for: .navigationBar)
+        .toolbarBackground(.clear, for: .bottomBar)
         .alert("确认删除", isPresented: $showingDeleteAlert) {
             Button("取消", role: .cancel) { }
             Button("删除", role: .destructive) {
@@ -96,8 +115,35 @@ struct DataManagementView: View {
         } message: {
             Text("确定要删除选中的\(selectedFiles.count)个文件吗？")
         }
+        .alert("确认导出", isPresented: $showingExportAlert) {
+            Button("取消", role: .cancel) { }
+            Button("导出", role: .none) {
+                exportSelectedFiles()
+            }
+        } message: {
+            Text("是否将选中的\(selectedFiles.count)个文件导出到iPhone？")
+        }
         .onAppear {
             loadDataFiles()
+        }
+        
+        if connectivityManager.isSending {
+            ProgressView("正在导出...")
+                .padding()
+        } else if !connectivityManager.lastMessage.isEmpty {
+            Text(connectivityManager.lastMessage)
+                .font(.footnote)
+                .foregroundColor(.secondary)
+                .padding()
+        }
+    }
+    
+    private func resetSelection() {
+        isAllSelected = false
+        dataFiles = dataFiles.map { file in
+            var newFile = file
+            newFile.isSelected = false
+            return newFile
         }
     }
     
@@ -132,6 +178,10 @@ struct DataManagementView: View {
         }
         loadDataFiles()
         isEditing = false
-        isAllSelected = false
+    }
+    
+    private func exportSelectedFiles() {
+        let urls = selectedFiles.map { $0.url }
+        connectivityManager.sendDataToPhone(fileURLs: urls)
     }
 } 
