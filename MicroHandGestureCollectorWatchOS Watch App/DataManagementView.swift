@@ -44,7 +44,7 @@ struct DataManagementView: View {
                 }
                 
                 ForEach($dataFiles) { $file in
-                    HStack {
+                    HStack(alignment: .top) {
                         if isEditing {
                             Button {
                                 file.isSelected.toggle()
@@ -55,10 +55,13 @@ struct DataManagementView: View {
                             }
                             .buttonStyle(PlainButtonStyle())
                         }
-                        VStack(alignment: .leading) {
+                        VStack(alignment: .leading, spacing: 4) {
                             Text(file.name)
-                                .lineLimit(1)
+                                .lineLimit(nil)
+                                .multilineTextAlignment(.leading)
+                                .font(.system(size: 14))
                         }
+                        .padding(.vertical, 4)
                     }
                 }
             }
