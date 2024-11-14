@@ -66,6 +66,20 @@ struct DataManagementView: View {
         .navigationTitle("数据管理")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    isEditing.toggle()
+                    if !isEditing {
+                        resetSelection()
+                    }
+                } label: {
+                    Text(isEditing ? "❌ 完成" : "✏️ 编辑")
+                        .font(.system(size: 14))
+                        .foregroundColor(isEditing ? .red : .blue)
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+            
             ToolbarItemGroup(placement: .bottomBar) {
                 if isEditing && !selectedFiles.isEmpty {
                     Button {
@@ -84,25 +98,6 @@ struct DataManagementView: View {
                     }
                     .foregroundColor(.blue)
                 }
-            }
-            
-            ToolbarItem(placement: .automatic) {
-                Button {
-                    isEditing.toggle()
-                    if !isEditing {
-                        resetSelection()
-                    }
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: isEditing ? "xmark.circle.fill" : "pencil.circle.fill")
-                            .resizable()
-                            .frame(width: 20, height: 20)
-                        Text(isEditing ? "完成" : "编辑")
-                            .font(.system(size: 14))
-                    }
-                    .foregroundColor(isEditing ? .red : .blue)
-                }
-                .buttonStyle(PlainButtonStyle())
             }
         }
         .toolbarBackground(.clear, for: .navigationBar)
