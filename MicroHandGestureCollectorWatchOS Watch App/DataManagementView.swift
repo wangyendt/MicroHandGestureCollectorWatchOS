@@ -1,4 +1,5 @@
 import SwiftUI
+import WatchConnectivity
 
 struct DataFile: Identifiable {
     let id = UUID()

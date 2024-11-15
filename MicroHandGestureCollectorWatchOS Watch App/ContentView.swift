@@ -7,6 +7,10 @@
 
 import SwiftUI
 
+#if os(watchOS)
+import WatchKit
+#endif
+
 struct ContentView: View {
     @StateObject private var motionManager = MotionManager()
     @StateObject private var connectivityManager = WatchConnectivityManager.shared
@@ -21,6 +25,9 @@ struct ContentView: View {
     
     @State private var showingDataManagement = false
     @State private var showingDeleteAllAlert = false
+    
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var workoutSession: WKExtendedRuntimeSession?
     
     let handOptions = ["左手", "右手"]
     let gestureOptions = ["单击[正]", "双击[正]", "握拳[正]", "鼓掌[负]", "抖腕[负]", "拍打[负]", "日常[负]"]
@@ -261,6 +268,29 @@ struct ContentView: View {
             }
             .padding(.horizontal, 10)
         }
+        .onChange(of: scenePhase) { newPhase in
+            switch newPhase {
+            case .active:
+                startExtendedSession()
+            case .background:
+                // 保持后台运行
+                if isCollecting {
+                    startExtendedSession()
+                }
+            case .inactive:
+                break
+            @unknown default:
+                break
+            }
+        }
+        .onChange(of: isCollecting) { newValue in
+            if newValue {
+                startExtendedSession()
+            } else {
+                workoutSession?.invalidate()
+                workoutSession = nil
+            }
+        }
     }
     
     private func deleteAllData() {
@@ -276,6 +306,14 @@ struct ContentView: View {
         } catch {
             print("Error deleting all files: \(error)")
         }
+    }
+    
+    private func startExtendedSession() {
+        guard workoutSession == nil else { return }
+        
+        let session = WKExtendedRuntimeSession()
+        session.start()
+        workoutSession = session
     }
 }
 
