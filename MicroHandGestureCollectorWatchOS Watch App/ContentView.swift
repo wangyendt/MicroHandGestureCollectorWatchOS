@@ -29,9 +29,11 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var workoutSession: WKExtendedRuntimeSession?
     
+    @State private var noteText = "静坐"
+    
     let handOptions = ["左手", "右手"]
-    let gestureOptions = ["单击[正]", "双击[正]", "握拳[正]", "鼓掌[负]", "抖腕[负]", "拍打[负]", "日常[负]"]
-    let forceOptions = ["轻", "重"]
+    let gestureOptions = ["单击[正]", "双击[正]", "握拳[正]", "左滑[正]", "右滑[正]", "鼓掌[负]", "抖腕[负]", "拍打[负]", "日常[负]"]
+    let forceOptions = ["轻", "中", "重"]
     let calculator = CalculatorBridge()
     
     var body: some View {
@@ -139,6 +141,18 @@ struct ContentView: View {
                     }
                 }
                 
+                // 新增备注输入框
+                HStack {
+                    Text("备注").font(.headline)
+                    TextField("请输入备注", text: $noteText)
+                        .frame(height: 32)
+                        .background(Color.gray.opacity(0.1))
+                        .cornerRadius(6)
+                }
+                .padding()
+                .background(Color.gray.opacity(0.2))
+                .cornerRadius(8)
+                
                 // 开始/停止按钮
                 Button(action: {
                     guard motionManager.isReady else { return }
@@ -147,7 +161,8 @@ struct ContentView: View {
                         motionManager.startDataCollection(
                             hand: selectedHand,
                             gesture: selectedGesture,
-                            force: selectedForce
+                            force: selectedForce,
+                            note: noteText
                         )
                     } else {
                         motionManager.stopDataCollection()

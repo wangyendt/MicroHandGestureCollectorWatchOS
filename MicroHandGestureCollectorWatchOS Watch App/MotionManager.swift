@@ -28,14 +28,14 @@ public class MotionManager: ObservableObject {
         print("设备运动状态: \(motionManager.isDeviceMotionAvailable ? "可用" : "不可用")")
     }
     
-    public func startDataCollection(hand: String, gesture: String, force: String) {
+    public func startDataCollection(hand: String, gesture: String, force: String, note: String) {
         stopDataCollection()
         isCollecting = true
         
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy_MM_dd_HH_mm_ss"
         let timestamp = dateFormatter.string(from: Date())
-        let folderName = "\(timestamp)_\(hand)_\(gesture)_\(force)"
+        let folderName = "\(timestamp)_\(hand)_\(gesture)_\(force)_\(note)"
         
         guard let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
             print("无法访问文档目录")
